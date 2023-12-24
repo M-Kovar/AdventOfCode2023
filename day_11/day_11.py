@@ -13,18 +13,12 @@ def get_input(input_path):
     with open(input_path, "r") as file:
         return [line.strip() for line in file]
 
-def expand(space_map, galaxy_symbol="#"):
-    empty_rows = [idx for idx,row in enumerate(space_map) if galaxy_symbol not in row]
+def expand(space_map, expansion_factor, galaxy_symbol="#"):
+    # Capture distances in space: 1 if galaxy is present, expand space if not
+    distances_rows = [expansion_factor if galaxy_symbol not in row else 1 for row in space_map]
     # zip(*matrix) generates a transposed version of a matrix
-    empty_cols = [idx for idx,col in enumerate(zip(*space_map)) if galaxy_symbol not in col]
-    for shift,idx in enumerate(empty_rows):
-        space_map.insert(idx+shift, space_map[idx+shift])
-    # Transpose to add the column-wise expansions
-    space_map_transposed = ["".join(x) for x in zip(*space_map)]
-    for shift,idx in enumerate(empty_cols):
-        space_map_transposed.insert(idx+shift, space_map_transposed[idx+shift])
-    # Transpose back
-    return ["".join(x) for x in zip(*space_map_transposed)]
+    distances_cols = [expansion_factor if galaxy_symbol not in col else 1 for col in zip(*space_map)]
+    return distances_rows, distances_cols
 
 def find_galaxies(space_map, galaxy_symbol="#"):
     galaxy_id = 1
@@ -39,31 +33,39 @@ def find_galaxies(space_map, galaxy_symbol="#"):
 def get_pair_combinations(numbers):
     return itertools.combinations(numbers, 2)
 
-def get_galaxy_distances(galaxies):
+def get_galaxy_distances(galaxies, expanded_distances):
     galaxy_pairs = get_pair_combinations(galaxies.keys())
-    distances = [calc_shortest_dist(galaxies[gal1_id], galaxies[gal2_id]) for gal1_id, gal2_id in galaxy_pairs]
+    distances = [calc_shortest_dist(galaxies[gal1_id], galaxies[gal2_id], expanded_distances) for gal1_id, gal2_id in galaxy_pairs]
     return distances
 
-def calc_shortest_dist(coords1, coords2):
+def calc_shortest_dist(coords1, coords2, distances):
     # Manhattan distance
     x1, y1 = coords1
     x2, y2 = coords2
-    return abs(x2-x1) + abs(y2-y1)
+    if x1 > x2:
+        x2,x1 = x1,x2
+    if y1 > y2:
+        y2,y1 = y1,y2
+    dist_rows, dist_cols = distances
+    return sum(dist_rows[x1:x2]) + sum(dist_cols[y1:y2])
 
 
 if __name__ == "__main__":
 
     input_path = "input.txt"
     space_map = get_input(input_path)
-    space_map = expand(space_map)
-
     galaxies = find_galaxies(space_map)
-    distances = get_galaxy_distances(galaxies)
 
     # Part 1:
+    space_expanded = expand(space_map, expansion_factor=2)
+    distances = get_galaxy_distances(galaxies, space_expanded)
+
     part1 = sum(distances)
     print(f"Part 1: {part1}")
 
     # Part 2:
-    # part2 = sum(distances)
-    # print(f"Part 2: {part2}")
+    space_expanded2 = expand(space_map, expansion_factor=1000000)
+    distances2 = get_galaxy_distances(galaxies, space_expanded2)
+
+    part2 = sum(distances2)
+    print(f"Part 2: {part2}")
